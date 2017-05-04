@@ -1,149 +1,227 @@
-/*
-Copyright IBM Corp. 2016 All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package main
 
-//WARNING - this chaincode's ID is hard-coded in chaincode_example04 to illustrate one way of
-//calling chaincode from a chaincode. If this example is modified, chaincode_example04.go has
-//to be modified as well with the new ID of chaincode_example02.
-//chaincode_example05 show's how chaincode ID can be passed in as a parameter instead of
-//hard-coding.
-
 import (
-	"errors"
+"errors"
 	"fmt"
 	"strconv"
-
+	
+	"encoding/json"
+		
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
-// SimpleChaincode example simple Chaincode implementation
-type SimpleChaincode struct {
+type SampleChaincode struct {
 }
 
-func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-	var A, B string    // Entities
-	var Aval, Bval int // Asset holdings
-	var err error
+var customerIndexStr = "_customerdetails"
 
-	if len(args) != 4 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 4")
-	}
+type Customer struct{
 
+Index string `json:"Index"`
+ID string `json:"ID"`
+Name string `json:"Name"`
+Details string `json:"Details"`
+
+}
+
+func (t *SampleChaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+fmt.Println("init is running")
+	var ID, Name, Details string    
+		var err error
 	// Initialize the chaincode
-	A = args[0]
-	Aval, err = strconv.Atoi(args[1])
-	if err != nil {
-		return nil, errors.New("Expecting integer value for asset holding")
-	}
-	B = args[2]
-	Bval, err = strconv.Atoi(args[3])
-	if err != nil {
-		return nil, errors.New("Expecting integer value for asset holding")
-	}
-	fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
+
+	ID = args[0]
+	//ID, err = strconv.Atoi(args[0])
+	//if err != nil {
+		//return nil, errors.New("Expecting integer value for asset holding")
+	//}
+	
+	Name = args[1]
+	
+		Details =args[2]
+	
+	
+	fmt.Printf("IDvalue = %d, NameValue = %d, Detailsvalue = %d\n", ID, Name,Details)
 
 	// Write the state to the ledger
-	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+	err = stub.PutState(ID, []byte(ID))
 	if err != nil {
 		return nil, err
 	}
 
-	err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
+	err = stub.PutState(Name, []byte(Name))
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
+	err =stub.PutState(Details, []byte(Details))
+	if err !=nil{
+	return nil, err
+	}
+
+	var empty []string
+	
+	jsonAsBytes, _ := json.Marshal(empty)								//marshal an emtpy array of strings to clear the index
+	
+	err = stub.PutState(customerIndexStr, jsonAsBytes)
+	
+	if err != nil {
+		return nil, err
+	}
+	
+fmt.Println("deploying is result",customerIndexStr)
+
+    return nil, nil
 }
+ 
+//Invoke Method
+ 
+func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
-// Transaction makes payment of X units from A to B
-func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-	if function == "delete" {
+fmt.Println("invoke is running")
+  
+		// if function == "delete" {
 		// Deletes an entity from its state
-		return t.delete(stub, args)
-	}
-else if function == "add_func" {
-	var A, B string    // Entities
-	var Aval, Bval int // Asset holdings
-	var X int          // Transaction value
-	var err error
-
-	if len(args) != 3 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 3")
-	}
-
-	A = args[0]
-	B = args[1]
-
+		// return t.delete(stub, args)
+	//}
+	if function == "save" {
+	var ID, Name, Details string    
+	var IDvalue int
+	
+	ID = args[0]
+	Name = args[1]
+    Details =args[2]
+   
+   fmt.Printf("ID %d Name %d Details",ID,Name,Details)
+   
 	// Get the state from the ledger
 	// TODO: will be nice to have a GetAllState call to ledger
-	Avalbytes, err := stub.GetState(A)
+	
+	IDbytes, err := stub.GetState(ID)
+	
 	if err != nil {
 		return nil, errors.New("Failed to get state")
 	}
-	if Avalbytes == nil {
+	if IDbytes == nil {
 		return nil, errors.New("Entity not found")
 	}
-	Aval, _ = strconv.Atoi(string(Avalbytes))
+	
+	IDvalue, _ = strconv.Atoi(string(IDbytes))
+	
 
-	Bvalbytes, err := stub.GetState(B)
+	Namebytes, err := stub.GetState(Name)
 	if err != nil {
 		return nil, errors.New("Failed to get state")
 	}
-	if Bvalbytes == nil {
+	if Namebytes == nil {
 		return nil, errors.New("Entity not found")
 	}
-	Bval, _ = strconv.Atoi(string(Bvalbytes))
-
-	// Perform the execution
-	X, err = strconv.Atoi(args[2])
+		
+		 valueName := string(Namebytes)
+	
+	Detailsbytes, err := stub.GetState(Details)
 	if err != nil {
-		return nil, errors.New("Invalid transaction amount, expecting a integer value")
+	return nil, errors.New("Failed to get the Details State")
 	}
-	Aval = Aval - X
-	Bval = Bval + X
-	fmt.Printf("Aval = %d, Bval = %d\n", Aval, Bval)
+	if Detailsbytes == nil {
+		return nil, errors.New("Entity not found")
+	}
+	  
+			 valueDetails := string(Detailsbytes)
 
-	// Write the state back to the ledger
-	err = stub.PutState(A, []byte(strconv.Itoa(Aval)))
+	
+	fmt.Printf("IDbytes = %d, Namebytes = %d, Detailsbytes = %d\n",IDbytes,Namebytes,Detailsbytes)	
+
+	
+	valueID := IDvalue
+	
+	
+	fmt.Printf("IDvalue = %d, NameValue = %d, Detailsvalue = %d\n", valueID,valueName,valueDetails)
+	
+	
+	Index := args[3]
+	
+	str := `{"Index": "` +Index+ `", "ID": "` + strconv.Itoa(valueID)+ `","Name": "` +valueName+ `","Details": "` +valueDetails+ `"}`
+	
+		
+	
+	fmt.Println("str inside invoke",str)
+	
+
+	err = stub.PutState(Index, []byte(str))									//store marble with id as key
+	fmt.Println("err",err)
 	if err != nil {
 		return nil, err
 	}
+	
+	//get the math index
 
-	err = stub.PutState(B, []byte(strconv.Itoa(Bval)))
+	customerBytes, err := stub.GetState(customerIndexStr)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed to get math index")
 	}
+	fmt.Println("customerBytes",customerBytes)
+		
+	var customerIndex []string
+	json.Unmarshal(customerBytes, &customerIndex)	
+	
+	//store and append the index to mathindex
+	fmt.Println("Index invoke",Index)
+	customerIndex = append(customerIndex, Index)									//add math name to index list
+	fmt.Println("! Customer index: ", customerIndex)
+	
+	jsonAsBytes, _ := json.Marshal(customerIndex)
+	err = stub.PutState(customerIndexStr, jsonAsBytes)						//store name of marble
 
+	return jsonAsBytes, nil
+	
+	
+	}else if function == "update" {											//writes a value to the chaincode state
+		return t.update(stub, args)
+	}else if function == "delete" {											//writes a value to the chaincode state
+		return t.delete(stub, args)
+	}
+	
 	return nil, nil
+	
 }
 
+//Update
+
+
+func (t *SampleChaincode)update(stub shim.ChaincodeStubInterface, args []string) ([]byte, error){
+var Index, Name, Details string 
+var err error
+
+fmt.Println("Update is running--")
+
+Index =args[0]
+Name= args[1]
+Details = args[2]
+fmt.Println("Updating value --",Index,Name,Details)
+updatestr :=`{"Index":"`+Index+`","Name":"`+Name+`","Details":"`+Details+`"}`
+fmt.Println("Updated string",updatestr)
+err = stub.PutState(Index,[]byte(updatestr))
+fmt.Println("err--",err)
+if (err != nil){
+return nil, err
 }
+return nil, nil
+
+}
+
 
 // Deletes an entity from state
-func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+func (t *SampleChaincode) delete(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	fmt.Println("Delete is running--")
 	if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 1")
 	}
 
-	A := args[0]
-
+	Index := args[0]
+	fmt.Println("Delete is ID--",Index)
 	// Delete the key from the state in ledger
-	err := stub.DelState(A)
+	err := stub.DelState(Index)
 	if err != nil {
 		return nil, errors.New("Failed to delete state")
 	}
@@ -151,40 +229,76 @@ func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string
 	return nil, nil
 }
 
-// Query callback representing the query of a chaincode
-func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
-	if function != "query" {
-		return nil, errors.New("Invalid query function name. Expecting \"query\"")
-	}
-	var A string // Entities
-	var err error
 
-	if len(args) != 1 {
-		return nil, errors.New("Incorrect number of arguments. Expecting name of the person to query")
-	}
-
-	A = args[0]
-
-	// Get the state from the ledger
-	Avalbytes, err := stub.GetState(A)
-	if err != nil {
-		jsonResp := "{\"Error\":\"Failed to get state for " + A + "\"}"
+//Query
+func (t *SampleChaincode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+    fmt.Println("query is running")
+	var Index, jsonResp string
+		if function == "query" {
+		
+	Index = args[0]
+	valAsbytes, err := stub.GetState(Index)									//get the var from chaincode state
+  if err != nil {
+		jsonResp = "{\"Error\":\"Failed to get state for " + Index + "\"}"
 		return nil, errors.New(jsonResp)
 	}
-
-	if Avalbytes == nil {
-		jsonResp := "{\"Error\":\"Nil amount for " + A + "\"}"
-		return nil, errors.New(jsonResp)
-	}
-
-	jsonResp := "{\"Name\":\"" + A + "\",\"Amount\":\"" + string(Avalbytes) + "\"}"
-	fmt.Printf("Query Response:%s\n", jsonResp)
-	return Avalbytes, nil
+	
+        res := Customer{}
+		json.Unmarshal(valAsbytes, &res)
+		
+		fmt.Printf("res data:",res)
+	
+	return valAsbytes, nil													//send it onward
+	
 }
 
-func main() {
-	err := shim.Start(new(SimpleChaincode))
+if function == "queryall" {
+
+//========================================
+	//for loop for incrementing the index
+	//===========================
+	
+	customerAsBytes, err := stub.GetState(customerIndexStr)
 	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
+		//return fail, errors.New("Failed to get math index")
 	}
+	
+	
+	var customerIndex []string
+	
+	json.Unmarshal(customerAsBytes, &customerIndex)
+	//fmt.Printf("customerAsBytes:",customerAsBytes)
+	
+	for i:= range customerIndex{													//iter through all the math		
+		
+		customerAsBytes, err := stub.GetState(customerIndex[i])						//grab this math
+		if err != nil {
+			//return fail, errors.New("Failed to get ")
+		}
+		fmt.Printf("customerIndex:",customerIndex[i])
+			
+		res := Customer{}
+		json.Unmarshal(customerAsBytes, &res)										//un stringify it aka JSON.parse()
+		fmt.Printf("res data:",res)
+		
+		jsonResp := "{\"Index\":\"" + res.Index + "\",\"ID\":\"" + res.ID + "\",\"Name\":\"" + res.Name + "\",\"Details\":\"" + res.Details + "\"}"
+	
+	    fmt.Printf("Query Response:%s\n", jsonResp)
+	
+		
+}
+
+}
+return nil, nil
+
+	}
+ 
+func main() {
+    err := shim.Start(new(SampleChaincode))
+    if err != nil {
+        fmt.Println("Could not start SampleChaincode")
+    } else {
+        fmt.Println("SampleChaincode successfully started")
+    }
+ 
 }
