@@ -78,13 +78,9 @@ fmt.Println("deploying is result",customerIndexStr)
  
 func (t *SampleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
-fmt.Println("invoke is running")
+
   
-		// if function == "delete" {
-		// Deletes an entity from its state
-		// return t.delete(stub, args)
-	//}
-	if function == "save" {
+	if function == "save_data" {
 	var ID, Name, Details string    
 	var IDvalue int
 	
@@ -176,9 +172,11 @@ fmt.Println("invoke is running")
 	return jsonAsBytes, nil
 	
 	
-	}else if function == "update" {											//writes a value to the chaincode state
+	}
+	if function == "update" {											//writes a value to the chaincode state
 		return t.update(stub, args)
-	}else if function == "delete" {											//writes a value to the chaincode state
+	}
+	if function == "delete" {											//writes a value to the chaincode state
 		return t.delete(stub, args)
 	}
 	
