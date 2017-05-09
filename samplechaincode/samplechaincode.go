@@ -3,7 +3,7 @@ package main
 import (
 "errors"
 	"fmt"
-	"strconv"
+	//"strconv"
 	
 	"encoding/json"
 		
@@ -79,67 +79,25 @@ fmt.Println("deploying is result",customerIndexStr)
 func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
 
+  var err error
   
 	if function == "save_data" {
 	var ID, Name, Details string    
-	var IDvalue int
-	
+
 	ID = args[0]
 	Name = args[1]
     Details =args[2]
    
    fmt.Printf("ID %d Name %d Details",ID,Name,Details)
    
-	// Get the state from the ledger
-	// TODO: will be nice to have a GetAllState call to ledger
-	
-	IDbytes, err := stub.GetState(ID)
-	
-	if err != nil {
-		return nil, errors.New("Failed to get state")
-	}
-	if IDbytes == nil {
-		return nil, errors.New("Entity not found")
-	}
-	
-	IDvalue, _ = strconv.Atoi(string(IDbytes))
-	
-
-	Namebytes, err := stub.GetState(Name)
-	if err != nil {
-		return nil, errors.New("Failed to get state")
-	}
-	if Namebytes == nil {
-		return nil, errors.New("Entity not found")
-	}
-		
-		 valueName := string(Namebytes)
-	
-	Detailsbytes, err := stub.GetState(Details)
-	if err != nil {
-	return nil, errors.New("Failed to get the Details State")
-	}
-	if Detailsbytes == nil {
-		return nil, errors.New("Entity not found")
-	}
-	  
-			 valueDetails := string(Detailsbytes)
-
-	
-	fmt.Printf("IDbytes = %d, Namebytes = %d, Detailsbytes = %d\n",IDbytes,Namebytes,Detailsbytes)	
-
-	
-	valueID := IDvalue
-	
-	
-	fmt.Printf("IDvalue = %d, NameValue = %d, Detailsvalue = %d\n", valueID,valueName,valueDetails)
-	
-	
+	valueID := string(ID)
+	valueName := string(Name)
+	valueDetails := string(Details)
 	Index := args[3]
-	
-	str := `{"Index": "` +Index+ `", "ID": "` + strconv.Itoa(valueID)+ `","Name": "` +valueName+ `","Details": "` +valueDetails+ `"}`
-	
+			
+	fmt.Printf("IDvalue = %d, NameValue = %d, Detailsvalue = %d\n", valueID,valueName,valueDetails)
 		
+	str := `{"Index": "` +Index+ `", "ID": "` + valueID+ `","Name": "` +valueName+ `","Details": "` +valueDetails+ `"}`			
 	
 	fmt.Println("str inside invoke",str)
 	
@@ -253,8 +211,7 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	
 }
 
-	
-	if function == "queryall" {
+if function == "queryall" {
 
 //========================================
 	//for loop for incrementing the index
@@ -262,50 +219,49 @@ func (t *SimpleChaincode) Query(stub shim.ChaincodeStubInterface, function strin
 	
 	//get the math index
 	
-	customerBytes, err := stub.GetState(customerIndexStr)
+	customerAsBytes, err := stub.GetState(customerIndexStr)
 	if err != nil {
 		//return fail, errors.New("Failed to get math index")
 	}
 	
 	
-	var index []string
+	var cusIndex []string
 	var data []byte
+		var jsonRespAll string
 	
-	json.Unmarshal(customerBytes, &index)
-	//fmt.Printf("customerIndexStr:",customerBytes)
+	json.Unmarshal(customerAsBytes, &cusIndex)
 	
-	for i:= range index{													//iter through all the math		
+	
+	for i:= range cusIndex{													//iter through all the math		
 		
-		customerBytes, err := stub.GetState(index[i])						//grab this math
+		customerAsBytes, err := stub.GetState(cusIndex[i])						//grab this math
 		if err != nil {
 			//return fail, errors.New("Failed to get ")
 		}
-		fmt.Printf("Index:",index[i])
+		fmt.Printf("cusIndex:",cusIndex[i])
 			
 		res := Customer{}
-		json.Unmarshal(customerBytes, &res)										//un stringify it aka JSON.parse()
+		json.Unmarshal(customerAsBytes, &res)										//un stringify it aka JSON.parse()
 		fmt.Printf("res data:",res)
 		
 		jsonResp := "{\"Index\":\"" + res.Index + "\",\"ID\":\"" + res.ID + "\",\"Name\":\"" + res.Name + "\",\"Details\":\"" + res.Details + "\"}"
 	
 	    fmt.Printf("Query Response:%s\n", jsonResp)
-		data = []byte(jsonResp)
+		
+		jsonRespAll = jsonRespAll+jsonResp
+	    fmt.Printf("Query Response:%s\n", jsonResp)
+		C:= string(jsonRespAll)
+		data = []byte(C)
+		
 	
-		//return customerIndexStr, nil					
-	//============================
-}
+	}
 
 return data, nil
 
-//return customerIndexStr, nil
-}			
-		
-		
-
-
+}
 return nil, nil
 
-	}
+}
  
 func main() {
     err := shim.Start(new(SimpleChaincode))
